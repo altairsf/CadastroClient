@@ -6,11 +6,9 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.List;
+import model.Produto;
 
-/**
- *
- * @author Altair
- */
 public class CadastroClient {
 
     /**
@@ -20,9 +18,9 @@ public class CadastroClient {
         Socket socket = new Socket("localhost", 4321);
         ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
         ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-        
+
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        
+
         System.out.println("------------------------------");
         System.out.print("Login: ");
         String login = reader.readLine();
@@ -31,11 +29,27 @@ public class CadastroClient {
 
         out.writeObject(login);
         out.writeObject(senha);
-        out.writeObject("Mensagem do cliente para o servidor.");
+        out.writeObject("Usuário conectado.");
         out.flush();
 
-        String mensagem = (String) in.readObject();
-        System.out.println("mensagem recebida do servidor=" + mensagem);
+        System.out.print("Digite o comando (L): ");
+        String comando = reader.readLine();
+        out.writeObject(comando);
+        out.flush();
+
+        //Lista de produtos
+        Object resposta = in.readObject();
+        if (resposta instanceof List) {
+            List<?> lista = (List<?>) resposta;
+
+            for (Object obj : lista) {
+                if (obj instanceof Produto) {
+                    Produto p = (Produto) obj;
+                    System.out.println("Produto: " + p.getNome());
+                }
+            }
+        } else {
+            System.out.println("Erro no servidor: " + resposta);
+        }
     }
-    
 }
