@@ -1,7 +1,6 @@
 package cadastroclient;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -14,42 +13,65 @@ public class CadastroClient {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        Socket socket = new Socket("localhost", 4321);
-        ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+    public static void main(String[] args) {
+        try (
+                Socket socket = new Socket("localhost", 4321); 
+                ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream()); 
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream()); 
+                BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));) {
+                
+                    System.out.println("------------------------------");
+                    System.out.print("Login: ");
+                    String login = reader.readLine();
+                    
+                    System.out.print("Senha: ");
+                    String senha = reader.readLine();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+                    out.writeObject(login);
+                    out.writeObject(senha);
+                    out.flush();
 
-        System.out.println("------------------------------");
-        System.out.print("Login: ");
-        String login = reader.readLine();
-        System.out.print("Senha: ");
-        String senha = reader.readLine();
+                Object respostaInicial = in.readObject();
+                if (respostaInicial instanceof String) {
+                    String msg = (String) respostaInicial;
+                    if (msg.startsWith("ERRO")) {
+                        System.out.println("Erro do servidor: " + msg);
+                        return;
+                    } else {
+                        System.out.println("Servidor: " + msg);
+                    }               
+                }
 
-        out.writeObject(login);
-        out.writeObject(senha);
-        out.writeObject("Usuário conectado.");
-        out.flush();
+            //Lista de produtos
+            while (true) {
+                System.out.print("Digite um comando (L para listar, S para sair): ");
+                String comando = reader.readLine();
+                out.writeObject(comando);
+                out.flush();
 
-        System.out.print("Digite o comando (L): ");
-        String comando = reader.readLine();
-        out.writeObject(comando);
-        out.flush();
+                Object resposta = in.readObject();
 
-        //Lista de produtos
-        Object resposta = in.readObject();
-        if (resposta instanceof List) {
-            List<?> lista = (List<?>) resposta;
-
-            for (Object obj : lista) {
-                if (obj instanceof Produto) {
-                    Produto p = (Produto) obj;
-                    System.out.println("Produto: " + p.getNome());
+                if (resposta instanceof String) {
+                    String texto = (String) resposta;
+                    System.out.println("Servidor: " + texto);
+                    if (texto.equalsIgnoreCase("Encerrando conexão.")) {
+                        break;  // Cliente sai do loop e encerra
+                    }
+                } else if (resposta instanceof List) {
+                    List<?> lista = (List<?>) resposta;
+                    for (Object obj : lista) {
+                        if (obj instanceof Produto) {
+                            Produto p = (Produto) obj;
+                            System.out.println("Produto: " + p.getNome());
+                        }
+                    }
+                } else {
+                    System.out.println("Resposta inesperada do servidor.");
                 }
             }
-        } else {
-            System.out.println("Erro no servidor: " + resposta);
+            System.out.println("Cliente encerrado.");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
